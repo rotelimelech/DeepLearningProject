@@ -16,6 +16,7 @@ model_urls = {
     'resnet152': 'https://download.pytorch.org/models/resnet152-394f9c45.pth',
 }
 
+
 def initialize_model(num_classes):
     model = models.resnet18(weights='DEFAULT')
     model.requires_grad_(False)
