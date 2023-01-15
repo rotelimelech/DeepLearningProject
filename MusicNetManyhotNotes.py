@@ -12,7 +12,11 @@ USED_COLUMNS = ['start_time', 'end_time', 'instrument', 'notes']
 # The NN should receive a vector in a standard length. 
 # This is the median length of a note in the dataset
 STANDARDIZE_SIZE = 10240
-
+TEST_TRAIN_VAL_SPLIT = {
+	'train': [0, 0.6],
+	'val': [0.6, 0.8],
+	'test': [0.8, 1],
+}
 
 class MusicNet(Dataset):
 	"""
@@ -25,14 +29,40 @@ class MusicNet(Dataset):
 	more then one note as one example
 	"""
 
-	def __init__(self, dataset_path, metadata_path=None, indexes_paths=None, groups=['train', 'test'], transform=None):
+	def __init__(self, dataset_path, metadata_path=None, indexes_paths=None, 
+			load_group=None, nsynth_groups=['train', 'test'], transform=None):
+		"""
+		Loads and indexes metadata from Nsynth dataset.
+
+		Parameters
+		----------
+			dataset_path: str
+			 	Path to the extracted nsynth dataset.
+			metadata_path: str
+				Path to the pre-indexed dataset's metadata. 
+				If supplied, will not index the csv files from `dataset_path`.
+				If used, `indexes_paths` must also be supplied
+			indexes_paths: str
+				Path to a json file containing mapping between nsynth's note
+				and instrument's ids to standardized indexes. (nsynth skips
+				some ids in their mapping)
+				If used, `metadata_path` must also be supplied
+			load_group: str
+				Subgroup of the dataset to load. One of ['test', 'train', 'val']
+				Only used when loading a pre-indexed version of the dataset.
+			groups: list or str
+				Groups to load from nsynth's dataset
+				If using a pre-indexed version of the dataset, will not refer 
+				to those groups as the test and train groups.
+				For this case, see `load_group`
+		"""
 		self.dataset_path = dataset_path
 		self.transform = transform
 
-		if isinstance(groups, list):
-			self.groups = groups
+		if isinstance(nsynth_groups, list):
+			self.nsynth_groups = nsynth_groups
 		else:
-			self.groups = [groups, ]
+			self.nsynth_groups = [nsynth_groups, ]
 
 		# loading the entire metadata when creating the object.
 		# Since our "true samples" are individual notes found 
@@ -67,6 +97,12 @@ class MusicNet(Dataset):
 			self.note_to_idx = indexed_vals['note_to_idx']
 			self.n_notes = len(self.note_to_idx)
 
+			if load_group is not None:
+				n_samples = len(self.all_metadata)
+				start_index = int(TEST_TRAIN_VAL_SPLIT[load_group][0] * n_samples)
+				end_index = int(TEST_TRAIN_VAL_SPLIT[load_group][1] * n_samples)
+				self.all_metadata = self.all_metadata[start_index:end_index]
+
 		else:
 			raise Exception('To load preprocessed metadata you must supply both ' + \
 				'a matadata csv file and a note and instrument indexing json.')
@@ -86,7 +122,7 @@ class MusicNet(Dataset):
 		joined_metadata_cols = ['csv_id', 'group'] + USED_COLUMNS
 		all_metadata = pd.DataFrame(columns=joined_metadata_cols)
 
-		for group in self.groups:
+		for group in nsynth_groups:
 			csvs_folder = join(self.dataset_path, f'{group}_labels')
 			for csv_file in os.listdir(csvs_folder):
 				if not csv_file.endswith('csv'):
@@ -103,6 +139,8 @@ class MusicNet(Dataset):
 					[all_metadata, metadata[joined_metadata_cols]], 
 					ignore_index=True)
 
+		# Shuffle indexes
+		all_metadata.sample(frac=1).reset_index(drop=True)
 		return all_metadata
 
 	def _to_manyhot_notes_vector(self, notes):
