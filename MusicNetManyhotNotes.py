@@ -18,6 +18,15 @@ TEST_TRAIN_VAL_SPLIT = {
 	'test': [0.8, 1],
 }
 
+def _str_keys_to_ints(x):
+	""" 
+	In JSON file, keys must be strings. This function casts them
+	back to ints
+	"""
+	for k in tuple(x.keys()):
+		x[int(k)] = x.pop(k)
+	return x
+
 class MusicNet(Dataset):
 	"""
 	Implements the MusicNet dataset as a pytorch object.
@@ -87,14 +96,15 @@ class MusicNet(Dataset):
 		elif metadata_path is not None and indexes_paths is not None:
 			print('loading cached metadata')
 			self.all_metadata = pd.read_csv(metadata_path)
+			self.all_metadata['notes'] = self.all_metadata['notes'].apply(json.loads)
 
 			with open(indexes_paths, 'r') as f:
 				indexed_vals = json.load(f)
 
-			self.instrument_to_idx = indexed_vals['instrument_to_idx']
+			self.instrument_to_idx = _str_keys_to_ints(indexed_vals['instrument_to_idx'])
 			self.n_instruments = len(self.instrument_to_idx)
 
-			self.note_to_idx = indexed_vals['note_to_idx']
+			self.note_to_idx = _str_keys_to_ints(indexed_vals['note_to_idx'])
 			self.n_notes = len(self.note_to_idx)
 
 			if load_group is not None:
