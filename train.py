@@ -17,6 +17,7 @@ def main():
         '.\\MusicNet',
         metadata_path='./MusicNet/all_metadata_processed_150123.csv',
         indexes_paths='./MusicNet/inst_and_note_index_150123.json',
+        load_group='train',
         # groups='train', # something broken in loading only one group
         transform=transforms.Spectrogram()
     )
