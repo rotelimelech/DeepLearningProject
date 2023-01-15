@@ -72,7 +72,7 @@ class MusicNet(Dataset):
 		# processed metadata file instead.
 		if metadata_path is None and indexes_paths is None:
 			print('indexing notes and creating')
-			self.all_metadata = self._load_metadata(groups)
+			self.all_metadata = self._load_metadata(nsynth_groups)
 			
 			# create a mapping between instrument and notes to ids in 
 			# the manyhot vector
@@ -122,7 +122,7 @@ class MusicNet(Dataset):
 		joined_metadata_cols = ['csv_id', 'group'] + USED_COLUMNS
 		all_metadata = pd.DataFrame(columns=joined_metadata_cols)
 
-		for group in nsynth_groups:
+		for group in self.nsynth_groups:
 			csvs_folder = join(self.dataset_path, f'{group}_labels')
 			for csv_file in os.listdir(csvs_folder):
 				if not csv_file.endswith('csv'):
