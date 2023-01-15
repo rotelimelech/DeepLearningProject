@@ -3,6 +3,7 @@ from os.path import join
 import numpy as np
 import pandas as pd
 import os
+import json
 import torch
 import torchaudio
 
@@ -24,7 +25,7 @@ class MusicNet(Dataset):
 	more then one note as one example
 	"""
 
-	def __init__(self, dataset_path, groups=['train', 'test'], transform=None):
+	def __init__(self, dataset_path, metadata_path=None, indexes_paths=None, groups=['train', 'test'], transform=None):
 		self.dataset_path = dataset_path
 		self.transform = transform
 
@@ -33,22 +34,42 @@ class MusicNet(Dataset):
 		else:
 			self.groups = [groups, ]
 
-		
 		# loading the entire metadata when creating the object.
 		# Since our "true samples" are individual notes found 
 		# across different files, we must load all of the separate
 		# files metadata to index them properly.
-		self.all_metadata = self._load_metadata(groups)
+		# This is a costly process, and we enable loading a previously 
+		# processed metadata file instead.
+		if metadata_path is None and indexes_paths is None:
+			print('indexing notes and creating')
+			self.all_metadata = self._load_metadata(groups)
+			
+			# create a mapping between instrument and notes to ids in 
+			# the manyhot vector
+			unique_instruments = self.all_metadata.instrument.unique()
+			self.n_instruments = len(unique_instruments)
+			self.instrument_to_idx = {inst: i for i, inst in enumerate(unique_instruments)}
+			
+			unique_notes = np.unique(self.all_metadata.notes.sum())
+			self.n_notes = len(unique_notes)
+			self.note_to_idx = {note: i for i, note in enumerate(unique_notes)}
 
-		# create a mapping between instrument and notes to ids in 
-		# the manyhot vector
-		unique_instruments = self.all_metadata.instrument.unique()
-		self.n_instruments = len(unique_instruments)
-		self.instrument_to_idx = {inst: i for i, inst in enumerate(unique_instruments)}
-		
-		unique_notes = np.unique(self.all_metadata.notes.sum())
-		self.n_notes = len(unique_notes)
-		self.note_to_idx = {note: i for i, note in enumerate(unique_notes)}
+		elif metadata_path is not None and indexes_paths is not None:
+			print('loading cached metadata')
+			self.all_metadata = pd.read_csv(metadata_path)
+
+			with open(indexes_paths, 'r') as f:
+				indexed_vals = json.load(f)
+
+			self.instrument_to_idx = indexed_vals['instrument_to_idx']
+			self.n_instruments = len(self.instrument_to_idx)
+
+			self.note_to_idx = indexed_vals['note_to_idx']
+			self.n_notes = len(self.note_to_idx)
+
+		else:
+			raise Exception('To load preprocessed metadata you must supply both ' + \
+				'a matadata csv file and a note and instrument indexing json.')
 
 	def _combine_multi_note_lines(self, df):
 		"""
