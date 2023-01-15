@@ -27,7 +27,6 @@ class MusicNet(Dataset):
 			self.groups = groups
 		else:
 			self.groups = [groups, ]
-
 		
 		# loading the entire metadata when creating the object.
 		# Since our "true samples" are individual notes found 
