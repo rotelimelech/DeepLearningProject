@@ -11,12 +11,13 @@ USED_COLUMNS = ['start_time', 'end_time', 'instrument', 'note']
 # This is the median length of a note in the dataset
 STANDARDIZE_SIZE = 10240
 
+
 class MusicNet(Dataset):
 	"""
 	Implements the MusicNet dataset as a pytorch object.
 	The original dataset contains music samples. 
 	This implementation splits every track to small segments
-	each contains a single note in a standardize length
+	each contains a single note in a standardized length
 	"""
 
 	def __init__(self, dataset_path, groups=['train', 'test'], transform=None):
@@ -30,7 +31,7 @@ class MusicNet(Dataset):
 		
 		# loading the entire metadata when creating the object.
 		# Since our "true samples" are individual notes found 
-		# across different files, we must load all of the separate
+		# across different files, we must load all the separate
 		# files metadata to index them properly.
 		self.all_metadata = self._load_metadata(groups)
 
@@ -49,7 +50,7 @@ class MusicNet(Dataset):
 				metadata['csv_id'] = csv_id
 				metadata['group'] = group
 
-				# adding the current file to all of the metadata
+				# adding the current file to all the metadata
 				all_metadata = pd.concat(
 					[all_metadata, metadata[joined_metadata_cols]], 
 					ignore_index=True)

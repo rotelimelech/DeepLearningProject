@@ -36,7 +36,7 @@ class MusicNet(Dataset):
 
 		# loading the entire metadata when creating the object.
 		# Since our "true samples" are individual notes found 
-		# across different files, we must load all of the separate
+		# across different files, we must load all the separate
 		# files metadata to index them properly.
 		# This is a costly process, and we enable loading a previously 
 		# processed metadata file instead.
@@ -73,9 +73,9 @@ class MusicNet(Dataset):
 
 	def _combine_multi_note_lines(self, df):
 		"""
-		At any given time, more then a single note might be played by an instrument. 
+		At any given time, more than a single note might be played by an instrument.
 		This leads to several entries with the same times but a different note.
-		In this function we unite this entries to one 
+		In this function we unite these entries to one
 		"""
 		grouped_entries = df.groupby(['start_time', 'end_time', 'instrument'])
 		multinote_df = grouped_entries.apply(lambda x: list(x['note'])).reset_index()
