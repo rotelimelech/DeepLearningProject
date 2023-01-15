@@ -16,9 +16,11 @@ def get_test_score(test_loader, model):
     correct = 0
     with torch.no_grad():
         for batch_id, (batch_data, instrument, note) in enumerate(train_loader):
-            output = model(batch_data)
+            batch_multi_channel = batch_data.repeat(1,3,1,1)
+            output = model(batch_multi_channel)
             prediction = output.argmax(dim=1, keepdim=True)
-            correct += pred.eq(instrument.view_as(pred)).sum().item()
+            instrument = instrument.argmax(dim=1, keepdim=True)
+            correct += prediction.eq(instrument.view_as(prediction)).sum().item()
 
     n_test_samples = len(test_loader.dataset)
     return correct / n_test_samples
