@@ -3,7 +3,7 @@ import torch.nn as nn
 import numpy as np
 #from MusicNet import MusicNet
 from MusicNetManyhotNotes import MusicNet
-from utils import get_dataset_loaders
+from utils import get_dataset_loaders, get_test_score, save_model
 from torchaudio import transforms
 from torchvision import models
 from os.path import join as path_join
@@ -19,36 +19,13 @@ BATCHES_PER_EPOCH = 200
 TARGET_INST = 0
 TARGET_NOTES = 1
 
-def get_test_score(test_loader, model, target):
-    perfect_match = 0
-    identified_notes = 0
-    missidentified_notes = 0
-
-    with torch.no_grad():
-        for batch_id, (batch_data, instrument, note) in enumerate(test_loader):
-            batch_multi_channel = batch_data.repeat(1,3,1,1)
-            output = model(batch_multi_channel)
-            prediction = output.argmax(dim=1, keepdim=True)
-
-            if target == TARGET_INST:
-                labels = instrument.argmax(dim=1, keepdim=True)
-            else:
-                labels = note.argmax(dim=1, keepdim=True)
-
-            perfect_match += (prediction == labels).all()
-            identified_notes += (prediction == labels).sum().item()
-            missidentified_notes += 
-            prediction.eq(labels.view_as(prediction)).sum().item()
-
-    n_test_samples = len(test_loader.dataset)
-    return correct / SAMPLES_PER_BATCH
-
 
 def train_with_warmup(model, train_loader, warmup_batches=100, 
     init_lr=1e-5, final_lr=0.001):
     model.train()
     opt = torch.optim.SGD(model.parameters(), lr=0.001)
-    
+    loss_fn = torch.nn.MSELoss()
+
     warmup_lr_pace = (final_lr - init_lr) / warmup_batches
     for epoch_id in range(N_EPOCHS):
         for batch_id, (batch_data, instrument, note) in enumerate(train_loader):

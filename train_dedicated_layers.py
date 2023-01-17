@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 
 #from MusicNet import MusicNet
+from utils import get_test_score
 from MusicNetManyhotNotes import MusicNet
 from torchaudio import transforms
 from torchvision import models
@@ -22,7 +23,7 @@ def save_model(model, folder, name):
     torch.save(model, path_join(folder, f'{name}_{now}'))
 
 
-def train_single_layer(base_model, train_loader, loss_fn, target):
+def train_single_layer(base_model, train_loader, target, lr=0.001):
     """
     Adds a single linear layer to `base_model` and trains it to detect
     the instruments present in the sample.
@@ -40,7 +41,8 @@ def train_single_layer(base_model, train_loader, loss_fn, target):
         # manyhot 
         nn.Sigmoid()
         )
-    opt = torch.optim.SGD(model.parameters(), lr=0.001)
+    opt = torch.optim.SGD(model.parameters(), lr=lr)
+    loss_fn = torch.nn.MSELoss()
 
     model.train()
     for epoch_id in range(N_EPOCHS):
@@ -66,41 +68,21 @@ def train_single_layer(base_model, train_loader, loss_fn, target):
     return model
 
 def main():
-    train_dataset = MusicNet(
-        '.\\MusicNet',
-        # metadata_path='./MusicNet/all_metadata_processed_150123.csv',
-        metadata_path='./MusicNet/all_local_metadata_150123.csv',
-        indexes_paths='./MusicNet/inst_and_note_index_150123.json',
-        load_group='train',
-        transform=transforms.Spectrogram()
-    )
-    train_loader =  torch.utils.data.DataLoader(train_dataset, 
-        batch_size=BATCH_SIZE, shuffle=True)
-
-    test_dataset = MusicNet(
-        '.\\MusicNet',
-        # metadata_path='./MusicNet/all_metadata_processed_150123.csv',
-        metadata_path='./MusicNet/all_local_metadata_150123.csv',
-        indexes_paths='./MusicNet/inst_and_note_index_150123.json',
-        load_group='test',
-        transform=transforms.Spectrogram()
-    )
-    test_loader =  torch.utils.data.DataLoader(test_dataset, 
-        batch_size=BATCH_SIZE, shuffle=True)
+    train_loader, test_loader = get_dataset_loaders()
 
     # Training a single layer do detect instruments
     base_model = models.resnet18(weights='DEFAULT')
-    loss_fn = torch.nn.MSELoss()
 
     inst_detect_model = train_single_layer(
-        base_model, train_loader, loss_fn, TARGET_INST)
+        base_model, train_loader, TARGET_INST)
     save_model(inst_detect_model, 'trained_models', 
         f'instrument_detect_single_layer_{N_EPOCHS}_epoch')
     inst_test_score = get_test_score(test_loader, inst_detect_model, TARGET_INST)
-    print(f'test score for instrument detection - {inst_test_score}')
+    print(f'Perfect identification - {inst_test_score*100:.2f}%')
+    print(f'Instruments identified correctly - {inst_test_score*100:.2f}%')
 
     note_detect_model = train_single_layer(
-        base_model, train_loader, loss_fn, TARGET_NOTES)
+        base_model, train_loader, TARGET_NOTES, lr=1e-4)
     save_model(note_detect_model, 'trained_models', 
         f'note_detect_single_layer_{N_EPOCHS}_epoch')
     note_test_score = get_test_score(test_loader, note_detect_model, TARGET_NOTES)
