@@ -81,12 +81,12 @@ def main():
     print(f'Perfect identification - {inst_test_score*100:.2f}%')
     print(f'Instruments identified correctly - {inst_test_score*100:.2f}%')
 
-    note_detect_model = train_single_layer(
-        base_model, train_loader, TARGET_NOTES, lr=1e-4)
-    save_model(note_detect_model, 'trained_models', 
-        f'note_detect_single_layer_{N_EPOCHS}_epoch')
-    note_test_score = get_test_score(test_loader, note_detect_model, TARGET_NOTES)
-    print(f'test score for notes detection - {note_test_score}')
+note_detect_model = train_single_layer(
+    base_model, train_loader, TARGET_NOTES, lr=1e-2)
+save_model(note_detect_model, 'trained_models', 
+    f'note_detect_single_layer_{N_EPOCHS}_epoch')
+note_test_score = get_test_score(test_loader, note_detect_model, TARGET_NOTES)
+print(f'test score for notes detection - {note_test_score}')
 
 
 if __name__ == '__main__':
