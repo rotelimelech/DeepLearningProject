@@ -22,6 +22,7 @@ class InstNoteIdentifier(torch.nn.Module):
         self.relu_notes = nn.ReLU(inplace=True)
         self.inst_layer = inst_layer
         self.relu_inst = nn.ReLU(inplace=True)
+        self.sig = nn.Sigmoid()
         base_model_out_features = list(base_model.children())[-1].out_features
 
         self.skip_conn_fc = nn.Linear(
@@ -45,6 +46,7 @@ class InstNoteIdentifier(torch.nn.Module):
             dim=1)
 
         out = self.skip_conn_fc(skip_conn_vals)
+        out = self.sig(out)
 
         return out 
 
