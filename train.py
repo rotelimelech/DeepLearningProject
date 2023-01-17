@@ -2,7 +2,8 @@ import torch
 import torch.nn as nn
 
 #from MusicNet import MusicNet
-from MusicNetManyhotNotes import MusicNet
+# from MusicNetManyhotNotes import MusicNet
+from MusicNetManyhotNotes2 import MusicNet
 from torchaudio import transforms
 from torchvision import models
 
@@ -27,20 +28,20 @@ def get_test_score(test_loader, model):
 
 def main():
     train_dataset = MusicNet(
-        '.\\MusicNet',
+        '.\\data\\musicnet\\musicnet',
         # metadata_path='./MusicNet/all_metadata_processed_150123.csv',
-        metadata_path='./MusicNet/all_local_metadata_150123.csv',
-        indexes_paths='./MusicNet/inst_and_note_index_150123.json',
+        # metadata_path='./MusicNet/all_local_metadata_150123.csv',
+        # indexes_paths='./MusicNet/inst_and_note_index_150123.json',
         load_group='train',
         transform=transforms.Spectrogram()
     )
     train_loader =  torch.utils.data.DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
 
     test_dataset = MusicNet(
-        '.\\MusicNet',
+        '.\\data\\musicnet\\musicnet',
         # metadata_path='./MusicNet/all_metadata_processed_150123.csv',
-        metadata_path='./MusicNet/all_local_metadata_150123.csv',
-        indexes_paths='./MusicNet/inst_and_note_index_150123.json',
+        # metadata_path='./MusicNet/all_local_metadata_150123.csv',
+        # indexes_paths='./MusicNet/inst_and_note_index_150123.json',
         load_group='test',
         transform=transforms.Spectrogram()
     )
