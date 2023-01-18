@@ -14,7 +14,7 @@ def get_dataset_loaders():
     train_dataset = MusicNet(
         '.\\MusicNet',
         # metadata_path='./MusicNet/all_metadata_processed_150123.csv',
-        metadata_path='./MusicNet/all_local_metadata_150123.csv',
+        metadata_path='./MusicNet/all_metadata_processed_180123.csv',
         indexes_paths='./MusicNet/inst_and_note_index_150123.json',
         load_group='train',
         transform=transforms.Spectrogram()
@@ -25,7 +25,7 @@ def get_dataset_loaders():
     test_dataset = MusicNet(
         '.\\MusicNet',
         # metadata_path='./MusicNet/all_metadata_processed_150123.csv',
-        metadata_path='./MusicNet/all_local_metadata_150123.csv',
+        metadata_path='./MusicNet/all_metadata_processed_180123.csv',
         indexes_paths='./MusicNet/inst_and_note_index_150123.json',
         load_group='test',
         transform=transforms.Spectrogram()
@@ -38,7 +38,7 @@ def get_dataset_loaders():
 def get_test_score(test_loader, model, target):
     perfect_match = 0
     identified_instances = 0
-    missidentified_instances = 0
+    false_pos_instances = 0
     total_instances = 0
 
     with torch.no_grad():
@@ -57,7 +57,7 @@ def get_test_score(test_loader, model, target):
                 
                 perfect_match += (prediction == labels).all()
                 identified_instances += ((prediction == labels) * (labels != 0)).sum()
-                missidentified_instances += ((prediction != labels) * (prediction != 0)).sum()
+                false_pos_instances += ((prediction != labels) * (prediction != 0)).sum()
                 total_instances += labels.sum()
             except Exception as e:
                 import ipdb
@@ -66,9 +66,28 @@ def get_test_score(test_loader, model, target):
     n_test_samples = len(test_loader.dataset)
     return perfect_match/n_test_samples, \
         identified_instances/total_instances, \
-        missidentified_instances/n_test_samples
+        false_pos_instances/n_test_samples
 
 
 def save_model(model, folder, name):
     now = datetime.now().strftime('%m%d_%H%M')
     torch.save(model, path_join(folder, f'{name}_{now}'))
+
+
+def iou_loss(prediction, labels):
+    false_positives = 0
+    false_negatives = 0
+
+    for sample_id in range(prediction.shape[0]):
+        for i, label in enumerate(labels[sample_id,:]):
+            if label == 1:
+                # the result should be 1 (positive) but the model
+                # misses - so this is a false negative
+                false_negatives += (prediction[sample_id, i] - 1)**2
+            else:
+                false_positives += prediction[sample_id, i]**2
+
+    # we give both errors an equal value
+    n_ones = sum(sum(labels))
+
+    return false_negatives/n_ones + false_positives/(prediction.shape[0]*prediction.shape[1]-n_ones)
