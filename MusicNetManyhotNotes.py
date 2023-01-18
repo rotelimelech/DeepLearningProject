@@ -97,6 +97,10 @@ class MusicNet(Dataset):
 			print('loading cached metadata')
 			self.all_metadata = pd.read_csv(metadata_path)
 			self.all_metadata['notes'] = self.all_metadata['notes'].apply(json.loads)
+			self.all_metadata['instrument'] = self.all_metadata['instrument'].apply(json.loads)
+			# My computer holds only a portion of the dataset
+			self.all_metadata = self.all_metadata[
+				self.all_metadata['csv_id'].isin([1759, 1819, 1742, 1749])]
 
 			with open(indexes_paths, 'r') as f:
 				indexed_vals = json.load(f)
@@ -150,19 +154,21 @@ class MusicNet(Dataset):
 					ignore_index=True)
 
 		# Shuffle indexes
-		all_metadata.sample(frac=1).reset_index(drop=True)
+		all_metadata = all_metadata.sample(frac=1).reset_index(drop=True)
 		return all_metadata
 
-	def _to_manyhot_notes_vector(self, notes):
-		manyhot_vec = np.zeros(self.n_notes)
-		for note in notes:
-			manyhot_vec[self.note_to_idx[note]] = 1
-		return manyhot_vec
+	def _to_manyhot_vector(self, on_indexes, data_type):
+		if data_type == 'note':
+			mapping = self.note_to_idx
+			vect_len = self.n_notes
+		else:
+			mapping = self.instrument_to_idx
+			vect_len = self.n_instruments
+		
+		manyhot_vec = np.zeros(vect_len)
+		for idx in on_indexes:
+			manyhot_vec[mapping[idx]] = 1
 
-	def _to_manyhot_instrument_vector(self, instrument):
-		manyhot_vec = np.zeros(self.n_instruments)
-		# in the future perhaps we will add multiple instruments
-		manyhot_vec[self.instrument_to_idx[instrument]] = 1
 		return manyhot_vec
 
 	def _norm_waveform_len(self, waveform):
@@ -201,8 +207,8 @@ class MusicNet(Dataset):
 		if self.transform:
 			clipped_sample = self.transform(clipped_sample)
 		
-		notes_vect = self._to_manyhot_notes_vector(sample_data['notes'])
-		instrument_vect = self._to_manyhot_instrument_vector(sample_data['instrument'])
+		notes_vect = self._to_manyhot_vector(sample_data['notes'], 'note')
+		instrument_vect = self._to_manyhot_vector(sample_data['instrument'], 'instrument')
 
 		return clipped_sample, instrument_vect, notes_vect
 
