@@ -84,9 +84,10 @@ def main():
 
     # Training a single layer do detect instruments
     base_model = models.resnet18(weights='DEFAULT')
+    base_model = base_model.requires_grad_(False)
 
     note_detect_model = train_single_layer(
-        base_model, train_loader, TARGET_NOTES, lr=8e-2)
+        base_model, train_loader, TARGET_NOTES, lr=1e-2)
     save_model(note_detect_model, 'trained_models', 
         f'note_detect_single_layer_{N_EPOCHS}_epoch')
     note_test_score = get_test_score(test_loader, note_detect_model, TARGET_NOTES)
@@ -97,8 +98,8 @@ def main():
     save_model(inst_detect_model, 'trained_models', 
         f'instrument_detect_single_layer_{N_EPOCHS}_epoch')
     inst_test_score = get_test_score(test_loader, inst_detect_model, TARGET_INST)
-    print(f'Perfect identification - {inst_test_score*100:.2f}%')
-    print(f'Instruments identified correctly - {inst_test_score*100:.2f}%')
+    print(f'Perfect identification - {inst_test_score}')
+    print(f'Instruments identified correctly - {inst_test_score}')
 
 
 
