@@ -39,7 +39,8 @@ class MusicNet(Dataset):
 	"""
 
 	def __init__(self, dataset_path, metadata_path=None, indexes_paths=None, 
-			load_group=None, nsynth_groups=['train', 'test'], transform=None):
+			load_group=None, nsynth_groups=['train', 'test'], transform=None,
+			sort_data_by_wavs=True):
 		"""
 		Loads and indexes metadata from Nsynth dataset.
 
@@ -64,6 +65,10 @@ class MusicNet(Dataset):
 				If using a pre-indexed version of the dataset, will not refer 
 				to those groups as the test and train groups.
 				For this case, see `load_group`
+			sort_data_by_wavs: bool
+				A major bottleneck is disk access. We enable the user to choose
+				to load samples from a single wav in a randomized order, drastically 
+				reducing disk access 
 		"""
 		self.dataset_path = dataset_path
 		self.transform = transform
@@ -72,6 +77,12 @@ class MusicNet(Dataset):
 			self.nsynth_groups = nsynth_groups
 		else:
 			self.nsynth_groups = [nsynth_groups, ]
+
+		# Loading WAV from disk takes a long time. Here we sacrifice 
+		# Some randomness in the data, by loading a single wav, and iterating
+		# over it alone
+		self.currently_loaded_wav = None
+		self.currently_loaded_wav_id = None
 
 		# loading the entire metadata when creating the object.
 		# Since our "true samples" are individual notes found 
@@ -195,11 +206,20 @@ class MusicNet(Dataset):
 		Notice - self.transform acts on waveform
 		"""
 		sample_data = self.all_metadata.iloc[index]
-		sample_wav_path = join(
-			self.dataset_path, 
-			f"{sample_data['group']}_data", 
-			f"{sample_data['csv_id']}.wav")
-		waveform, sample_rate = torchaudio.load(sample_wav_path)
+		# required wav is not cached
+		if self.currently_loaded_wav_id != sample_data['csv_id']:
+			sample_wav_path = join(
+				self.dataset_path, 
+				f"{sample_data['group']}_data", 
+				f"{sample_data['csv_id']}.wav")
+			waveform, sample_rate = torchaudio.load(sample_wav_path)
+
+			self.currently_loaded_wav_id = sample_data['csv_id']
+			self.currently_loaded_wav = waveform
+		# skip file load and use cache 
+		else:
+			waveform = self.currently_loaded_wav
+
 
 		clipped_sample = waveform[:, sample_data['start_time']:sample_data['end_time']]
 		clipped_sample = self._norm_waveform_len(clipped_sample)
