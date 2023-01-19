@@ -128,6 +128,9 @@ class MusicNet(Dataset):
 				end_index = int(TEST_TRAIN_VAL_SPLIT[load_group][1] * n_samples)
 				self.all_metadata = self.all_metadata[start_index:end_index]
 
+			if sort_data_by_wavs:
+				self.all_metadata = self.all_metadata.sort_values('csv_id').reset_index(drop=True)
+
 		else:
 			raise Exception('To load preprocessed metadata you must supply both ' + \
 				'a matadata csv file and a note and instrument indexing json.')
@@ -219,7 +222,6 @@ class MusicNet(Dataset):
 		# skip file load and use cache 
 		else:
 			waveform = self.currently_loaded_wav
-
 
 		clipped_sample = waveform[:, sample_data['start_time']:sample_data['end_time']]
 		clipped_sample = self._norm_waveform_len(clipped_sample)

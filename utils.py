@@ -20,7 +20,7 @@ def get_dataset_loaders():
         transform=transforms.Spectrogram()
     )
     train_loader =  torch.utils.data.DataLoader(train_dataset, 
-        batch_size=BATCH_SIZE, shuffle=True)
+        batch_size=BATCH_SIZE, shuffle=False)
 
     test_dataset = MusicNet(
         '.\\MusicNet',
@@ -31,7 +31,7 @@ def get_dataset_loaders():
         transform=transforms.Spectrogram()
     )
     test_loader =  torch.utils.data.DataLoader(test_dataset, 
-        batch_size=BATCH_SIZE, shuffle=True) 
+        batch_size=BATCH_SIZE, shuffle=False) 
     return train_loader, test_loader
 
 
