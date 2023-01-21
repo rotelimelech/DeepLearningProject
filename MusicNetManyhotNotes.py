@@ -130,6 +130,7 @@ class MusicNet(Dataset):
 
 			if sort_data_by_wavs:
 				self.all_metadata = self.all_metadata.sort_values('csv_id').reset_index(drop=True)
+				self._block_shuffle(40)
 
 		else:
 			raise Exception('To load preprocessed metadata you must supply both ' + \
@@ -145,6 +146,20 @@ class MusicNet(Dataset):
 		multinote_df = grouped_entries.apply(lambda x: list(x['note'])).reset_index()
 		multinote_df.columns = ['start_time', 'end_time', 'instrument', 'notes'] 
 		return multinote_df
+
+	def _block_shuffle(self, group_size):
+		n_entries = len(self.all_metadata)
+		indexes = np.arange(0, n_entries, group_size)
+		np.random.shuffle(indexes)
+
+		shuffled_df = pd.DataFrame(columns=self.all_metadata.columns)
+		for block_start in indexes:
+			shuffled_df = pd.concat(
+				[shuffled_df, self.all_metadata[block_start:block_start+group_size]],
+				ignore_index=True
+				)
+
+		self.all_metadata = shuffled_df
 
 	def _load_metadata(self, groups):
 		joined_metadata_cols = ['csv_id', 'group'] + USED_COLUMNS
