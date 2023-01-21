@@ -14,25 +14,39 @@ def get_dataset_loaders():
     train_dataset = MusicNet(
         '.\\MusicNet',
         # metadata_path='./MusicNet/all_metadata_processed_150123.csv',
-        metadata_path='./MusicNet/all_metadata_processed_180123.csv',
+        metadata_path='./MusicNet/all_metadata_processed_190123.csv',
         indexes_paths='./MusicNet/inst_and_note_index_150123.json',
         load_group='train',
+        sort_data_by_wavs=False,
         transform=transforms.Spectrogram()
     )
     train_loader =  torch.utils.data.DataLoader(train_dataset, 
         batch_size=BATCH_SIZE, shuffle=False)
 
+    val_dataset = MusicNet(
+        '.\\MusicNet',
+        # metadata_path='./MusicNet/all_metadata_processed_150123.csv',
+        metadata_path='./MusicNet/all_metadata_processed_190123.csv',
+        indexes_paths='./MusicNet/inst_and_note_index_150123.json',
+        load_group='val',
+        sort_data_by_wavs=False,
+        transform=transforms.Spectrogram()
+    )
+    val_loader =  torch.utils.data.DataLoader(val_dataset, 
+        batch_size=BATCH_SIZE, shuffle=False) 
+
     test_dataset = MusicNet(
         '.\\MusicNet',
         # metadata_path='./MusicNet/all_metadata_processed_150123.csv',
-        metadata_path='./MusicNet/all_metadata_processed_180123.csv',
+        metadata_path='./MusicNet/all_metadata_processed_190123.csv',
         indexes_paths='./MusicNet/inst_and_note_index_150123.json',
         load_group='test',
+        sort_data_by_wavs=False,
         transform=transforms.Spectrogram()
     )
     test_loader =  torch.utils.data.DataLoader(test_dataset, 
         batch_size=BATCH_SIZE, shuffle=False) 
-    return train_loader, test_loader
+    return train_loader, val_loader, test_loader
 
 
 def get_test_score(test_loader, model, target):
@@ -67,6 +81,7 @@ def get_test_score(test_loader, model, target):
     return perfect_match/n_test_samples, \
         identified_instances/total_instances, \
         false_pos_instances/n_test_samples
+
 
 
 def save_model(model, folder, name):
