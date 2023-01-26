@@ -119,9 +119,6 @@ class MusicNet(Dataset):
 		self.all_metadata = pd.read_csv(metadata_path)
 		self.all_metadata['notes'] = self.all_metadata['notes'].apply(json.loads)
 		self.all_metadata['instrument'] = self.all_metadata['instrument'].apply(json.loads)
-		# My computer holds only a portion of the dataset
-		self.all_metadata = self.all_metadata[
-			self.all_metadata['csv_id'].isin([1759, 1819, 1742, 1749])]
 
 		with open(indexes_paths, 'r') as f:
 			indexed_vals = json.load(f)
