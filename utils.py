@@ -10,14 +10,13 @@ TARGET_NOTES = 1
 OUTPUT_THRESHOLD = 0.6
 
 
-def get_dataset_loaders():
+def get_dataset_loaders(project_folder=''):
     train_dataset = MusicNet(
         '.\\MusicNet',
         # metadata_path='./MusicNet/all_metadata_processed_150123.csv',
         metadata_path='./MusicNet/all_metadata_processed_190123.csv',
         indexes_paths='./MusicNet/inst_and_note_index_150123.json',
         load_group='train',
-        sort_data_by_wavs=False,
         transform=transforms.Spectrogram()
     )
     train_loader =  torch.utils.data.DataLoader(train_dataset, 
@@ -29,7 +28,6 @@ def get_dataset_loaders():
         metadata_path='./MusicNet/all_metadata_processed_190123.csv',
         indexes_paths='./MusicNet/inst_and_note_index_150123.json',
         load_group='val',
-        sort_data_by_wavs=False,
         transform=transforms.Spectrogram()
     )
     val_loader =  torch.utils.data.DataLoader(val_dataset, 
@@ -41,7 +39,6 @@ def get_dataset_loaders():
         metadata_path='./MusicNet/all_metadata_processed_190123.csv',
         indexes_paths='./MusicNet/inst_and_note_index_150123.json',
         load_group='test',
-        sort_data_by_wavs=False,
         transform=transforms.Spectrogram()
     )
     test_loader =  torch.utils.data.DataLoader(test_dataset, 
@@ -49,7 +46,39 @@ def get_dataset_loaders():
     return train_loader, val_loader, test_loader
 
 
-def get_test_score(test_loader, model, target):
+def uniform_threshold_predictor(output, threshold):
+    prediction = output > threshold
+    prediction[np.arange((len(output))), output.argmax(dim=1)] = True
+    return prediction
+
+
+def uniform_threshold_norm_predictor(output, distribution_bias, threshold):
+    normed_output = (output-val_predictions)
+    prediction = normed_output > threshold
+    prediction[np.arange((len(output))), output.argmax(dim=1)] = True
+    return prediction
+
+
+def top_n_norm_predictor(output, distribution_bias, n):
+    batch_size, vect_size = output.shape
+    normed_output = (output-val_predictions)
+    
+    cutoff_val = normed_output[np.arange(batch_size),normed_output.argsort()[:,-n].reshape(-1)]
+    cutoff_val = cutoff_val.reshape(-1,1).repeat(1,vect_size)
+    
+    prediction = normed_output >= cutoff_val
+    return prediction
+
+
+def get_test_score(test_loader, model, target, predictor, predictor_params, device):
+    """
+    Calculate the model's performance on the test score.
+
+    Returns:
+      * The percentage of perfectly identified samples
+      * The percentage of correctly identified instruments across all samples
+      * The average of falsely identified instruments for a sample
+    """
     perfect_match = 0
     identified_instances = 0
     false_pos_instances = 0
@@ -57,31 +86,29 @@ def get_test_score(test_loader, model, target):
 
     with torch.no_grad():
         for batch_id, (batch_data, instrument, note) in enumerate(test_loader):
-            batch_multi_channel = batch_data.repeat(1,3,1,1)
-            try:
-                output = model(batch_multi_channel)
-                prediction = output > OUTPUT_THRESHOLD
-                prediction[np.arange((len(output))), output.argmax(dim=1)] = True
-                prediction = prediction.numpy()
+            batch_multi_channel = batch_data.repeat(1,3,1,1).to(device)
+            output = model(batch_multi_channel).cpu()
 
-                if target == TARGET_INST:
-                    labels = (instrument == 1).numpy()
-                else:
-                    labels = (note == 1).numpy()
-                
-                perfect_match += (prediction == labels).all()
-                identified_instances += ((prediction == labels) * (labels != 0)).sum()
-                false_pos_instances += ((prediction != labels) * (prediction != 0)).sum()
-                total_instances += labels.sum()
-            except Exception as e:
-                import ipdb
-                ipdb.set_trace()
+            prediction = predictor(output, *predictor_params).numpy()
 
-    n_test_samples = len(test_loader.dataset)
+            if target == 'instrument':
+                labels = (instrument == 1).numpy()
+            else:
+                labels = (note == 1).numpy()
+            
+            perfect_match += (prediction == labels).all()
+            identified_instances += ((prediction == labels) * (labels != 0)).sum()
+            false_pos_instances += ((prediction != labels) * (prediction != 0)).sum()
+            total_instances += labels.sum()
+
+            if batch_id == 200: #> 5_000:
+                break
+
+    n_test_samples = batch_id*10
+    # n_test_samples = len(test_loader.dataset)
     return perfect_match/n_test_samples, \
         identified_instances/total_instances, \
         false_pos_instances/n_test_samples
-
 
 
 def save_model(model, folder, name):

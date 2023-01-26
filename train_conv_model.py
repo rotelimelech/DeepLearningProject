@@ -68,7 +68,8 @@ def main():
 
     # Training a single layer do detect instruments
     n_notes = train_loader.dataset.n_notes
-    note_detect_model = ConvAxisModel(11, 83)
+    n_instruments = train_loader.dataset.n_instruments
+    note_detect_model = ConvAxisModel(n_instruments, n_notes)
     note_detect_model = train(note_detect_model, train_loader, 'notes', lr=1e-5)
 
     save_model(note_detect_model, 'trained_models', 

@@ -40,35 +40,35 @@ class MusicNet(Dataset):
 
 	def __init__(self, dataset_path, metadata_path=None, indexes_paths=None, 
 			load_group=None, nsynth_groups=['train', 'test'], transform=None,
-			sort_data_by_wavs=True):
+			wav_block_shuffle=None):
 		"""
 		Loads and indexes metadata from Nsynth dataset.
 
 		Parameters
 		----------
-			dataset_path: str
-			 	Path to the extracted nsynth dataset.
-			metadata_path: str
-				Path to the pre-indexed dataset's metadata. 
-				If supplied, will not index the csv files from `dataset_path`.
-				If used, `indexes_paths` must also be supplied
-			indexes_paths: str
-				Path to a json file containing mapping between nsynth's note
-				and instrument's ids to standardized indexes. (nsynth skips
-				some ids in their mapping)
-				If used, `metadata_path` must also be supplied
-			load_group: str
-				Subgroup of the dataset to load. One of ['test', 'train', 'val']
-				Only used when loading a pre-indexed version of the dataset.
-			groups: list or str
-				Groups to load from nsynth's dataset
-				If using a pre-indexed version of the dataset, will not refer 
-				to those groups as the test and train groups.
-				For this case, see `load_group`
-			sort_data_by_wavs: bool
-				A major bottleneck is disk access. We enable the user to choose
-				to load samples from a single wav in a randomized order, drastically 
-				reducing disk access 
+		dataset_path: str
+		 	Path to the extracted nsynth dataset.
+		metadata_path: str
+			Path to the pre-indexed dataset's metadata. 
+			If supplied, will not index the csv files from `dataset_path`.
+			If used, `indexes_paths` must also be supplied
+		indexes_paths: str
+			Path to a json file containing mapping between nsynth's note
+			and instrument's ids to standardized indexes. (nsynth skips
+			some ids in their mapping)
+			If used, `metadata_path` must also be supplied
+		load_group: str
+			Subgroup of the dataset to load. One of ['test', 'train', 'val']
+			Only used when loading a pre-indexed version of the dataset.
+		groups: list or str
+			Groups to load from nsynth's dataset
+			If using a pre-indexed version of the dataset, will not refer 
+			to those groups as the test and train groups.
+			For this case, see `load_group`
+		wav_block_shuffle: int
+			A major bottleneck is disk access. We enable the user to choose
+			to load samples from a single wav in a randomized order, drastically 
+			reducing disk access 
 		"""
 		self.dataset_path = dataset_path
 		self.transform = transform
@@ -91,50 +91,56 @@ class MusicNet(Dataset):
 		# This is a costly process, and we enable loading a previously 
 		# processed metadata file instead.
 		if metadata_path is None and indexes_paths is None:
-			print('indexing notes and creating')
-			self.all_metadata = self._load_metadata(nsynth_groups)
-			
-			# create a mapping between instrument and notes to ids in 
-			# the manyhot vector
-			unique_instruments = self.all_metadata.instrument.unique()
-			self.n_instruments = len(unique_instruments)
-			self.instrument_to_idx = {inst: i for i, inst in enumerate(unique_instruments)}
-			
-			unique_notes = np.unique(self.all_metadata.notes.sum())
-			self.n_notes = len(unique_notes)
-			self.note_to_idx = {note: i for i, note in enumerate(unique_notes)}
+			self._index_dataset(nsynth_groups)
 
 		elif metadata_path is not None and indexes_paths is not None:
-			print('loading cached metadata')
-			self.all_metadata = pd.read_csv(metadata_path)
-			self.all_metadata['notes'] = self.all_metadata['notes'].apply(json.loads)
-			self.all_metadata['instrument'] = self.all_metadata['instrument'].apply(json.loads)
-			# My computer holds only a portion of the dataset
-			self.all_metadata = self.all_metadata[
-				self.all_metadata['csv_id'].isin([1759, 1819, 1742, 1749])]
-
-			with open(indexes_paths, 'r') as f:
-				indexed_vals = json.load(f)
-
-			self.instrument_to_idx = _str_keys_to_ints(indexed_vals['instrument_to_idx'])
-			self.n_instruments = len(self.instrument_to_idx)
-
-			self.note_to_idx = _str_keys_to_ints(indexed_vals['note_to_idx'])
-			self.n_notes = len(self.note_to_idx)
-
-			if load_group is not None:
-				n_samples = len(self.all_metadata)
-				start_index = int(TEST_TRAIN_VAL_SPLIT[load_group][0] * n_samples)
-				end_index = int(TEST_TRAIN_VAL_SPLIT[load_group][1] * n_samples)
-				self.all_metadata = self.all_metadata[start_index:end_index]
-
-			if sort_data_by_wavs:
-				self.all_metadata = self.all_metadata.sort_values('csv_id').reset_index(drop=True)
-				self._block_shuffle(40)
-
+			self._load_preindexed_dataset(metadata_path, indexes_paths, 
+				load_group, wav_block_shuffle)
 		else:
 			raise Exception('To load preprocessed metadata you must supply both ' + \
 				'a matadata csv file and a note and instrument indexing json.')
+
+	def _index_dataset(self, nsynth_groups):
+		print('indexing notes and creating')
+		self.all_metadata = self._load_metadata(nsynth_groups)
+		
+		# create a mapping between instrument and notes to ids in 
+		# the manyhot vector
+		unique_instruments = self.all_metadata.instrument.unique()
+		self.n_instruments = len(unique_instruments)
+		self.instrument_to_idx = {inst: i for i, inst in enumerate(unique_instruments)}
+		
+		unique_notes = np.unique(self.all_metadata.notes.sum())
+		self.n_notes = len(unique_notes)
+		self.note_to_idx = {note: i for i, note in enumerate(unique_notes)}
+
+	def _load_preindexed_dataset(self, metadata_path, indexes_paths, load_group, wav_block_shuffle):
+		print('loading cached metadata')
+		self.all_metadata = pd.read_csv(metadata_path)
+		self.all_metadata['notes'] = self.all_metadata['notes'].apply(json.loads)
+		self.all_metadata['instrument'] = self.all_metadata['instrument'].apply(json.loads)
+		# My computer holds only a portion of the dataset
+		self.all_metadata = self.all_metadata[
+			self.all_metadata['csv_id'].isin([1759, 1819, 1742, 1749])]
+
+		with open(indexes_paths, 'r') as f:
+			indexed_vals = json.load(f)
+
+		self.instrument_to_idx = _str_keys_to_ints(indexed_vals['instrument_to_idx'])
+		self.n_instruments = len(self.instrument_to_idx)
+
+		self.note_to_idx = _str_keys_to_ints(indexed_vals['note_to_idx'])
+		self.n_notes = len(self.note_to_idx)
+
+		if load_group is not None:
+			n_samples = len(self.all_metadata)
+			start_index = int(TEST_TRAIN_VAL_SPLIT[load_group][0] * n_samples)
+			end_index = int(TEST_TRAIN_VAL_SPLIT[load_group][1] * n_samples)
+			self.all_metadata = self.all_metadata[start_index:end_index]
+
+		if wav_block_shuffle is not None:
+			self.all_metadata = self.all_metadata.sort_values('csv_id').reset_index(drop=True)
+			self._block_shuffle(wav_block_shuffle)
 
 	def _combine_multi_note_lines(self, df):
 		"""
