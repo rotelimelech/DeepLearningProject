@@ -179,18 +179,35 @@ class MusicNet(Dataset):
 				csv_id = csv_file.split('.')[0]
 
 				metadata = pd.read_csv(join(csvs_folder, csv_file))
-				metadata = self._combine_multi_note_lines(metadata)
-				metadata['csv_id'] = csv_id
-				metadata['group'] = group
+				new_metadata = pd.DataFrame(columns=joined_metadata_cols)
+				time_stamps = np.unique(np.concatenate((metadata['start_time'], metadata['end_time'])))
+
+				notes = metadata['note']
+				instruments = metadata['instrument']
+				relevant_notes = []
+				relevant_instruments = []
+				start_times = time_stamps[:-1]
+				end_times = time_stamps[1:]
+				for time_stamp in time_stamps[:-1]:
+					relevant_notes.append((notes[(metadata['start_time'] <= time_stamp) * (metadata['end_time'] >= time_stamp)]).values)
+					relevant_instruments.append((instruments[(metadata['start_time'] <= time_stamp) * (metadata['end_time'] >= time_stamp)]).values)
+
+				new_metadata['start_time'] = start_times
+				new_metadata['end_time'] = end_times
+				new_metadata['instrument'] = relevant_instruments
+				new_metadata['notes'] = relevant_notes
+				new_metadata['csv_id'] = csv_id
+				new_metadata['group'] = group
 
 				# adding the current file to all of the metadata
 				all_metadata = pd.concat(
-					[all_metadata, metadata[joined_metadata_cols]], 
+					[all_metadata, new_metadata[joined_metadata_cols]],
 					ignore_index=True)
 
 		# Shuffle indexes
-		all_metadata = all_metadata.sample(frac=1).reset_index(drop=True)
+		all_metadata.sample(frac=1).reset_index(drop=True)
 		return all_metadata
+
 
 	def _to_manyhot_vector(self, on_indexes, data_type):
 		if data_type == 'note':
