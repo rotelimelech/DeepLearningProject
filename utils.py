@@ -53,7 +53,7 @@ def uniform_threshold_predictor(output, threshold):
 
 
 def uniform_threshold_norm_predictor(output, distribution_bias, threshold):
-    normed_output = (output-val_predictions)
+    normed_output = (output-distribution_bias)
     prediction = normed_output > threshold
     prediction[np.arange((len(output))), output.argmax(dim=1)] = True
     return prediction
@@ -61,7 +61,7 @@ def uniform_threshold_norm_predictor(output, distribution_bias, threshold):
 
 def top_n_norm_predictor(output, distribution_bias, n):
     batch_size, vect_size = output.shape
-    normed_output = (output-val_predictions)
+    normed_output = (output-distribution_bias)
     
     cutoff_val = normed_output[np.arange(batch_size),normed_output.argsort()[:,-n].reshape(-1)]
     cutoff_val = cutoff_val.reshape(-1,1).repeat(1,vect_size)
@@ -101,11 +101,7 @@ def get_test_score(test_loader, model, target, predictor, predictor_params, devi
             false_pos_instances += ((prediction != labels) * (prediction != 0)).sum()
             total_instances += labels.sum()
 
-            if batch_id == 200: #> 5_000:
-                break
-
-    n_test_samples = batch_id*10
-    # n_test_samples = len(test_loader.dataset)
+    n_test_samples = len(test_loader.dataset)
     return perfect_match/n_test_samples, \
         identified_instances/total_instances, \
         false_pos_instances/n_test_samples
