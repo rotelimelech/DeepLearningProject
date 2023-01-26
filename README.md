@@ -9,6 +9,8 @@ In total, we identify 11 different instruments.
 
 For the model's implementation and training process, please see `dedicated_layers_model.py`.
 
+To create a model and train it, please execute `train_single_layer.py`
+
 ## The MusicNet Dataset
 The network was trained using [MusicNet Dataset](https://www.kaggle.com/datasets/imsparsh/musicnet-dataset).
 The dataset contains 330 classical recordings and maps which instrument is playing which note at any given time. 
