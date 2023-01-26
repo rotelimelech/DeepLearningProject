@@ -54,6 +54,6 @@ def train_single_layer(model, train_loader, val_loader, target, loss_fn, device,
             if batch_id % 200 == 0 and batch_id != 0:
                 print(f'epoch - {epoch_id}, batch - {batch_id}, loss - {loss}')
 
-        print(get_test_score(val_loader, model, target))
+        print(get_test_score(val_loader, model, target, predictor, predictor_params, device))
         scheduler.step()
     return model, losses
