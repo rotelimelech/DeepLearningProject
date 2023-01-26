@@ -59,5 +59,7 @@ effect of choosing the top 3 instruments no matter what. Perhaps a mix between t
 thresholding can give better results.
 
 References
+
 [1] https://github.com/micmarty/Instronizer
+
 [2] https://github.com/biboamy/instrument-prediction
