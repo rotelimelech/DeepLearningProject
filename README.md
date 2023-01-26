@@ -35,7 +35,7 @@ similar to the IoU loss.
 
 We used the following loss function:
 
-$$\scriptL = \frac{FN}{N_{playing}} + \frac{FP}{N_{not playing}}$$
+$$L = \frac{FN}{N_{playing}} + \frac{FP}{N_{not playing}}$$
 
 This proposal gives the false positives and the false negatives the same weight, forcing the model to avoid prediction with high amount of false negatives. Using this loss function resulted in a drastic improvement in performance as can be seen under `Performence analysis/compare_loss_function`, and under the attached PDF.
 
